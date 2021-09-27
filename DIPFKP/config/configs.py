@@ -12,9 +12,11 @@ import numpy as np
 
 # noinspection PyPep8
 class Config:
-    def __init__(self):
+    def __init__(self, img_name, k_gt):
         self.parser = argparse.ArgumentParser()
         self.conf = None
+        self.k_gt = k_gt
+        self.img_name = img_name
 
         # Model
         self.parser.add_argument('--model', default='DIPFKP', help='models: DIPFKP, DIPSOFTMAX, DoubleDIP.')
@@ -50,16 +52,16 @@ class Config:
     def parse(self, args=None):
         """Parse the configuration"""
         self.conf = self.parser.parse_args(args=args)
-        self.set_gpu_device()
+        # self.set_gpu_device()
         self.clean_file_name()
         self.set_output_directory()
-        print("Scale: %s \tNonblind SR: %s" % ('X{}'.format(self.conf.sf), str(self.conf.SR)))
+        # print("Scale: %s \tNonblind SR: %s" % ('X{}'.format(self.conf.sf), str(self.conf.SR)))
 
         if self.conf.real:
             self.conf.kernel_gt = np.ones([min(self.conf.sf * 4 + 3, 21), min(self.conf.sf * 4 + 3, 21)])
         else:
-            path = self.conf.input_image_path.replace('lr_x', 'gt_k_x').replace('.png', '.mat')
-            self.conf.kernel_gt = sio.loadmat(path)['Kernel']
+            # path = self.conf.input_image_path.replace('lr_x', 'gt_k_x').replace('.png', '.mat')
+            self.conf.kernel_gt = self.k_gt
 
         return self.conf
 
@@ -73,7 +75,7 @@ class Config:
 
     def clean_file_name(self):
         """Retrieves the clean image file_name for saving purposes"""
-        self.conf.img_name = self.conf.input_image_path.split('/')[-1].split('.')[0]
+        self.conf.img_name = self.img_name.split('/')[-1].split('.')[0]
 
     def set_output_directory(self):
         """Define the output directory name and create the folder"""

@@ -167,7 +167,7 @@ class BatchNorm(nn.Module):
 
 class FlowSequential(nn.Sequential):
     """ Container for layers of a normalizing flow """
-
+    
     def forward(self, x, y):
         sum_log_abs_det_jacobians = 0
         for module in self:

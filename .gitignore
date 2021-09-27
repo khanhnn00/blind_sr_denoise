@@ -1,2 +1,5 @@
 *.pth
 *.pt
+*.png
+*.PNG
+*.mat

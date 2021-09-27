@@ -1,21 +1,26 @@
 import os
 import argparse
 import torch
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 import sys
 import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
-from util import read_image, im2tensor01, map2tensor, tensor2im01, analytic_kernel, kernel_shift, evaluation_dataset
+from util import read_image, im2tensor01, map2tensor, tensor2im01, analytic_kernel, kernel_shift, evaluation_dataset, tensor2im
 from config.configs import Config
 from model.model import DIPFKP
+import random
+from data.prepare_dataset import my_degradation, degradation
+from torchvision.utils import save_image
 
 # for nonblind SR
 sys.path.append('../')
 from NonblindSR.usrnet import USRNet
 
 '''
-# ------------------------------------------------
+# ------------------------------------------------ 
 # main.py for DIP-KP
 # ------------------------------------------------
 '''
@@ -48,16 +53,18 @@ def main():
     prog.add_argument('--model', type=str, default='DIPFKP', help='models: DIPFKP, DIPSoftmax, DoubleDIP.')
     prog.add_argument('--dataset', '-d', type=str, default='Set5',
                       help='dataset, e.g., Set5.')
-    prog.add_argument('--sf', type=str, default='2', help='The wanted SR scale factor')
+    prog.add_argument('--sf', type=str, default='4', help='The wanted SR scale factor')
     prog.add_argument('--path-nonblind', type=str, default='../data/pretrained_models/usrnet_tiny.pth',
                       help='path for trained nonblind model')
     prog.add_argument('--SR', action='store_true', default=False, help='when activated - nonblind SR is performed')
     prog.add_argument('--real', action='store_true', default=False, help='if the input is real image')
 
     # to be overwritten automatically
-    prog.add_argument('--path-KP', type=str, default='../data/pretrained_models/FKP_x2.pt',
+    prog.add_argument('--path-KP', type=str, default='../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt',
                       help='path for trained kernel prior')
-    prog.add_argument('--input-dir', '-i', type=str, default='../data/datasets/Set5/DIPFKP_lr_x2',
+    prog.add_argument('--kernel-dir', type=str, default='../data/result/datasets/Kernel_validation_set_x4',
+                      help='path for trained kernel prior')
+    prog.add_argument('--input-dir', '-i', type=str, default='../../SRbenchmark/HR_x4',
                       help='path to image input directory.')
     prog.add_argument('--output-dir', '-o', type=str,
                       default='../data/log_KernelGANFKP/Set5_DIPFKP_lr_x2', help='path to image output directory')
@@ -66,9 +73,12 @@ def main():
     args = prog.parse_args()
 
     # overwritting paths
-    args.path_KP = '../data/pretrained_models/FKP_x{}.pt'.format(args.sf)
-    args.input_dir = '../data/datasets/{}/DIPFKP_lr_x{}'.format(args.dataset, args.sf)
-    args.output_dir = '../data/log_DIPFKP/{}_{}_lr_x{}'.format(args.dataset, args.model, args.sf)
+    args.path_KP = '../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt'
+    # args.path_KP = '../data/pretrained_models/FKP_x4.pt'
+    args.input_dir = '../../SRbenchmark/HR_x4'
+    args.output_dir = '../data/log_DIPFKP/{}_{}_3lr_x{}'.format(args.dataset, args.model, args.sf)
+    args.kernel_dir = '../data/result/datasets/Kernel_validation_set_x4'
+    k_list = os.listdir(args.kernel_dir)
 
     # load nonblind model
     if args.SR:
@@ -86,8 +96,19 @@ def main():
         print(filename)
 
         # kernel estimation
-        conf = Config().parse(create_params(filename, args))
+        k_idx = random.randint(a=0, b=len(k_list)-1)
+        k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
+        conf = Config(filename,k).parse(create_params(filename, args))
+        k_idx = random.randint(a=0, b=len(k_list)-1)
+        k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
+        save_image(k.unsqueeze(0), os.path.join(conf.output_dir_path, './k_GT.png'),nrow=1,  normalize=True)
         lr_image = im2tensor01(read_image(os.path.join(args.input_dir, filename))).unsqueeze(0)
+        # print(lr_image.shape)
+        lr_image = my_degradation(lr_image, k, 4, 0)
+        lr = lr_image.copy()
+        lr_image = im2tensor01(lr_image).unsqueeze(0)
+        plt.imsave(os.path.join(conf.output_dir_path, '%s_LR.png' % conf.img_name), lr)
+        # print(lr_image.size())
 
         # crop the image to 960x960 due to memory limit
         if 'DIV2K' in args.input_dir:

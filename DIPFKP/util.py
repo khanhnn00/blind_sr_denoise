@@ -245,6 +245,8 @@ def kernel_shift(kernel, sf):
 
 
 def save_final_kernel_png(k, conf, gt_kernel, step=''):
+    # print(type(k), type(gt_kernel))
+    # print(k.shape, gt_kernel.shape)
     """saves the final kernel and the analytic kernel to the results folder"""
     os.makedirs(os.path.join(conf.output_dir_path), exist_ok=True)
     savepath_mat = os.path.join(conf.output_dir_path, '%s.mat' % conf.img_name)
@@ -254,7 +256,7 @@ def save_final_kernel_png(k, conf, gt_kernel, step=''):
         savepath_png = savepath_png.replace('.png', '_{}.png'.format(step))
 
     sio.savemat(savepath_mat, {'Kernel': k})
-    plot_kernel(gt_kernel, k, savepath_png)
+    plot_kernel(gt_kernel.numpy(), k, savepath_png)
 
 
 def plot_kernel(gt_k_np, out_k_np, savepath):
@@ -427,21 +429,21 @@ def evaluation_dataset(input_dir, conf, used_iter=''):
     kernel_psnr = 0
     for filename in filesource:
         # load gt kernel
-        if conf.real:
-            kernel_gt = np.ones([min(conf.sf * 4 + 3, 21), min(conf.sf * 4 + 3, 21)])
-        else:
-            path = os.path.join(input_dir, filename).replace('lr_x', 'gt_k_x').replace('.png', '.mat')
-            kernel_gt = sio.loadmat(path)['Kernel']
+        # if conf.real:
+        #     kernel_gt = np.ones([min(conf.sf * 4 + 3, 21), min(conf.sf * 4 + 3, 21)])
+        # else:
+        #     path = os.path.join(input_dir, filename).replace('lr_x', 'gt_k_x').replace('.png', '.mat')
+        #     kernel_gt = sio.loadmat(path)['Kernel']
 
-        # load estimated kernel
-        path = os.path.join(conf.output_dir_path, filename).replace('.png', '.mat')
-        kernel = sio.loadmat(path)['Kernel']
+        # # load estimated kernel
+        # path = os.path.join(conf.output_dir_path, filename).replace('.png', '.mat')
+        # kernel = sio.loadmat(path)['Kernel']
 
-        # calculate psnr
-        kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
+        # # calculate psnr
+        # kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
 
         # load HR
-        path = os.path.join(input_dir.replace(input_dir.split('/')[-1], 'HR'), filename)
+        path = os.path.join(input_dir, filename)
         hr = read_image(path)
         hr = modcrop(hr, conf.sf)
 
@@ -463,14 +465,12 @@ def evaluation_dataset(input_dir, conf, used_iter=''):
         # im_ssim += ssim
 
 
-    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}, Average Kernel PSNR: {:.2f}'.format(conf.output_dir_path,
+    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}'.format(conf.output_dir_path,
                                                                                                   used_iter,
                                                                                                   len(filesource),
                                                                                                   im_psnr / len(
                                                                                                       filesource),
                                                                                                   im_ssim / len(
-                                                                                                      filesource),
-                                                                                                  kernel_psnr / len(
                                                                                                       filesource)))
 
 

@@ -33,12 +33,14 @@ class DIPFKP:
 
         # Acquire configuration
         self.conf = conf
+        # print(conf)
         self.lr = lr
         self.sf = conf.sf
         self.kernel_size = min(conf.sf * 4 + 3, 21)
 
         # DIP model
         _, C, H, W = self.lr.size()
+        
         self.input_dip = get_noise(C, 'noise', (H * self.sf, W * self.sf)).to(device).detach()
         self.net_dip = skip(C, 3,
                             num_channels_down=[128, 128, 128, 128, 128],
@@ -92,6 +94,7 @@ class DIPFKP:
         # loss
         self.ssimloss = SSIM().to(device)
         self.mse = torch.nn.MSELoss().to(device)
+        self.laplace_penalty = HyperLaplacianPenalty(3, 0.66).cuda()
 
         print('*' * 60 + '\nSTARTED {} on: {}...'.format(conf.model, conf.input_image_path))
 
@@ -102,7 +105,7 @@ class DIPFKP:
     '''
 
     def train(self):
-        for iteration in tqdm.tqdm(range(self.conf.max_iters), ncols=60):
+        for iteration in tqdm.tqdm(range(1000), ncols=60):
             iteration += 1
 
             self.optimizer_dip.zero_grad()
@@ -151,14 +154,16 @@ class DIPFKP:
             # first use SSIM because it helps the model converge faster
             if iteration <= 80:
                 loss = 1 - self.ssimloss(out, self.lr)
+                # loss += 2e-2 * self.laplace_penalty(sr)
             else:
                 loss = self.mse(out, self.lr)
+                # loss += 2e-2 * self.laplace_penalty(sr)
 
             loss.backward()
             self.optimizer_dip.step()
             self.optimizer_kp.step()
 
-            if (iteration % 10 == 0 or iteration == 1) and self.conf.verbose:
+            if (iteration % 200 == 0):
                 save_final_kernel_png(move2cpu(kernel.squeeze()), self.conf, self.conf.kernel_gt, iteration)
                 plt.imsave(os.path.join(self.conf.output_dir_path, '{}_{}.png'.format(self.conf.img_name, iteration)),
                                         tensor2im01(sr), vmin=0, vmax=1., dpi=1)
@@ -190,5 +195,28 @@ class SphericalOptimizer(torch.optim.Optimizer):
         for param in self.params:
             param.data.div_((param.pow(2).sum(tuple(range(2, param.ndim)), keepdim=True) + 1e-9).sqrt())
             param.mul_(self.radii[param])
+
+        return loss
+
+class HyperLaplacianPenalty(nn.Module):
+    def __init__(self, num_channels, alpha, eps=1e-6):
+        super(HyperLaplacianPenalty, self).__init__()
+
+        self.alpha = alpha
+        self.eps = eps
+
+        self.Kx = torch.Tensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]).cuda()
+        self.Kx = self.Kx.expand(1, num_channels, 3, 3)
+        self.Kx.requires_grad = False
+        self.Ky = torch.Tensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]).cuda()
+        self.Ky = self.Ky.expand(1, num_channels, 3, 3)
+        self.Ky.requires_grad = False
+
+    def forward(self, x):
+        gradX = F.conv2d(x, self.Kx, stride=1, padding=1)
+        gradY = F.conv2d(x, self.Ky, stride=1, padding=1)
+        grad = torch.sqrt(gradX ** 2 + gradY ** 2 + self.eps)
+
+        loss = (grad ** self.alpha).mean()
 
         return loss

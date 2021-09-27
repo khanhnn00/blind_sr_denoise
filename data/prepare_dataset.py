@@ -109,6 +109,26 @@ def degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda
 
     return output
 
+def my_degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda')):
+    # preprocess image and kernel
+    input = input.type(torch.FloatTensor).to(device).permute(1, 0, 2, 3)
+    # print(input.shape)
+    input = F.pad(input, pad=(kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2),
+                  mode='circular')
+    kernel = kernel.type(torch.FloatTensor).to(device).unsqueeze(0).unsqueeze(0)
+
+    # blur
+    output = F.conv2d(input, kernel)
+    output = output.permute(2, 3, 0, 1).squeeze(3).cpu().numpy()
+
+    # down-sample
+    output = output[::scale_factor, ::scale_factor, :]
+
+    # add AWGN noise
+    output += np.random.normal(0, np.random.uniform(0, noise_im), output.shape)
+
+    return output
+
 
 def modcrop(img_in, scale):
     # img_in: Numpy, HWC or HW
