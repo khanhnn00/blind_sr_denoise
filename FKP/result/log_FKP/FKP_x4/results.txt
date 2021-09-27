@@ -1,0 +1,140 @@
+{'alpha': 1e-06,
+ 'batch_size': 100,
+ 'cond_label_size': None,
+ 'conditional': False,
+ 'device': device(type='cuda', index=0),
+ 'evaluate': False,
+ 'flip_var_order': False,
+ 'generate': True,
+ 'hidden_size': 25,
+ 'input_dims': (1, 19, 19),
+ 'input_size': 361,
+ 'kernel_size': 19,
+ 'log_interval': 500,
+ 'lr': 0.0001,
+ 'n_blocks': 5,
+ 'n_components': 1,
+ 'n_epochs': 100,
+ 'n_hidden': 1,
+ 'no_batch_norm': False,
+ 'no_cuda': False,
+ 'normalization': 0.16908,
+ 'output_dir': './result/log_FKP/FKP_x4',
+ 'restore_file': '',
+ 'results_file': './result/log_FKP/FKP_x4/results.txt',
+ 'seed': 0,
+ 'sf': 4,
+ 'start_epoch': 0,
+ 'train': True,
+ 'val_save_path': './result/datasets/Kernel_validation_set'}
+KernelPrior(
+  (net): FlowSequential(
+    (0): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (1): BatchNorm()
+    (2): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (3): BatchNorm()
+    (4): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (5): BatchNorm()
+    (6): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (7): BatchNorm()
+    (8): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (9): BatchNorm()
+  )
+)
+Evaluate (epoch 0): -logp(x) = 253.552 +/- 2.800
+Evaluate (epoch 1): -logp(x) = 171.358 +/- 3.257
+Evaluate (epoch 2): -logp(x) = 182.603 +/- 2.774
+Evaluate (epoch 3): -logp(x) = 121.230 +/- 3.327
+Evaluate (epoch 4): -logp(x) = 102.752 +/- 3.385
+Evaluate (epoch 5): -logp(x) = 100.037 +/- 3.303
+Evaluate (epoch 6): -logp(x) = 119.173 +/- 2.962
+Evaluate (epoch 7): -logp(x) = 84.371 +/- 3.273
+Evaluate (epoch 8): -logp(x) = 102.470 +/- 2.996
+Evaluate (epoch 9): -logp(x) = 75.923 +/- 3.248
+Evaluate (epoch 10): -logp(x) = 81.297 +/- 3.111
+Evaluate (epoch 11): -logp(x) = 55.430 +/- 3.349
+Evaluate (epoch 12): -logp(x) = 66.353 +/- 3.184
+Evaluate (epoch 13): -logp(x) = 65.661 +/- 3.155
+Evaluate (epoch 14): -logp(x) = 73.524 +/- 3.075
+Evaluate (epoch 15): -logp(x) = 73.516 +/- 3.040
+Evaluate (epoch 16): -logp(x) = 73.744 +/- 2.968
+Evaluate (epoch 17): -logp(x) = 62.014 +/- 3.064
+Evaluate (epoch 18): -logp(x) = 51.755 +/- 3.124
+Evaluate (epoch 19): -logp(x) = 50.121 +/- 3.178
+Evaluate (epoch 20): -logp(x) = 43.601 +/- 3.181
+Evaluate (epoch 21): -logp(x) = 73.567 +/- 2.909

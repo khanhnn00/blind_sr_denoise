@@ -11,6 +11,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+
 import math
 import argparse
 import pprint
@@ -27,9 +30,9 @@ parser.add_argument('--train', action='store_true', default=False, help='Train a
 parser.add_argument('--evaluate', action='store_true', default=False, help='Evaluate a flow.')
 parser.add_argument('--restore_file', type=str, default='', help='Path to model to restore.')
 parser.add_argument('--generate', action='store_true', default=True, help='Generate samples from a model.')
-parser.add_argument('--val_save_path', default='../data/datasets/Kernel_validation_set',
+parser.add_argument('--val_save_path', default='./result/datasets/Kernel_validation_set',
                     help='Where to save validation set')
-parser.add_argument('--output_dir', default='../data/log_FKP/FKP')
+parser.add_argument('--output_dir', default='./result/log_FKP/FKP')
 parser.add_argument('--results_file', default='results.txt', help='Filename where to store settings and test results.')
 parser.add_argument('--no_cuda', action='store_true', help='Do not use cuda.')
 # data
