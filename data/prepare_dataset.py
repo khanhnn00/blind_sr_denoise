@@ -111,21 +111,35 @@ def degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda
 
 def my_degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda')):
     # preprocess image and kernel
+    # print(input.max(), input.min())
     input = input.type(torch.FloatTensor).to(device).permute(1, 0, 2, 3)
     # print(input.shape)
+    # print(input.max(), input.min())
+    x = input.type(torch.uint8)
+    # print(x.max(), x.min())
     input = F.pad(input, pad=(kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2),
                   mode='circular')
     kernel = kernel.type(torch.FloatTensor).to(device).unsqueeze(0).unsqueeze(0)
 
     # blur
     output = F.conv2d(input, kernel)
-    output = output.permute(2, 3, 0, 1).squeeze(3).cpu().numpy()
+    output = output.permute(2, 3, 0, 1).squeeze(3)
 
     # down-sample
     output = output[::scale_factor, ::scale_factor, :]
 
+    
+
     # add AWGN noise
-    output += np.random.normal(0, np.random.uniform(0, noise_im), output.shape)
+    tmp = torch.clamp(output * 255, min=0, max=255).short()
+    noises = np.random.normal(0, noise_im, output.shape)
+    noises = torch.from_numpy(noises).short().to(device)
+    output = tmp + noises
+    output = torch.clamp(output, min=0, max=255).type(torch.uint8)
+    output = (output/255.0).type(torch.FloatTensor).cpu().numpy()
+    # output += np.random.normal(0, noise_im, output.shape)
+
+    # print(output.max(), output.min())
 
     return output
 

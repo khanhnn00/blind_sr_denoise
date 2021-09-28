@@ -432,15 +432,15 @@ def evaluation_dataset(input_dir, conf, used_iter=''):
         # if conf.real:
         #     kernel_gt = np.ones([min(conf.sf * 4 + 3, 21), min(conf.sf * 4 + 3, 21)])
         # else:
-        #     path = os.path.join(input_dir, filename).replace('lr_x', 'gt_k_x').replace('.png', '.mat')
-        #     kernel_gt = sio.loadmat(path)['Kernel']
+        path = os.path.join(conf.output_dir_path, 'k_{}'.format(filename)).replace('.png', '.mat')
+        kernel_gt = sio.loadmat(path)['Kernel']
 
         # # load estimated kernel
-        # path = os.path.join(conf.output_dir_path, filename).replace('.png', '.mat')
-        # kernel = sio.loadmat(path)['Kernel']
+        path = os.path.join(conf.output_dir_path, filename).replace('.png', '.mat')
+        kernel = sio.loadmat(path)['Kernel']
 
-        # # calculate psnr
-        # kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
+        # calculate psnr
+        kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
 
         # load HR
         path = os.path.join(input_dir, filename)
@@ -465,12 +465,14 @@ def evaluation_dataset(input_dir, conf, used_iter=''):
         # im_ssim += ssim
 
 
-    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}'.format(conf.output_dir_path,
+    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}, Average Kernel PSNR: {:.2f}'.format(conf.output_dir_path,
                                                                                                   used_iter,
                                                                                                   len(filesource),
                                                                                                   im_psnr / len(
                                                                                                       filesource),
                                                                                                   im_ssim / len(
+                                                                                                      filesource),
+                                                                                                  kernel_psnr / len(
                                                                                                       filesource)))
 
 

@@ -58,6 +58,7 @@ def main():
                       help='path for trained nonblind model')
     prog.add_argument('--SR', action='store_true', default=False, help='when activated - nonblind SR is performed')
     prog.add_argument('--real', action='store_true', default=False, help='if the input is real image')
+    prog.add_argument('--noise', type=int, default=0, help='if the input is real image')
 
     # to be overwritten automatically
     prog.add_argument('--path-KP', type=str, default='../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt',
@@ -98,13 +99,13 @@ def main():
         # kernel estimation
         k_idx = random.randint(a=0, b=len(k_list)-1)
         k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
-        conf = Config(filename,k).parse(create_params(filename, args))
-        k_idx = random.randint(a=0, b=len(k_list)-1)
-        k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
+        conf = Config(filename, k).parse(create_params(filename, args))
+        # k_idx = random.randint(a=0, b=len(k_list)-1)
+        # k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
         save_image(k.unsqueeze(0), os.path.join(conf.output_dir_path, './k_GT.png'),nrow=1,  normalize=True)
         lr_image = im2tensor01(read_image(os.path.join(args.input_dir, filename))).unsqueeze(0)
         # print(lr_image.shape)
-        lr_image = my_degradation(lr_image, k, 4, 0)
+        lr_image = my_degradation(lr_image, k, 4, args.noise)
         lr = lr_image.copy()
         lr_image = im2tensor01(lr_image).unsqueeze(0)
         plt.imsave(os.path.join(conf.output_dir_path, '%s_LR.png' % conf.img_name), lr)

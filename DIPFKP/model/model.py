@@ -8,6 +8,7 @@ import os
 import matplotlib.pyplot as plt
 from .networks import skip, fcn
 from .SSIM import SSIM
+from scipy.io import savemat
 
 sys.path.append('../')
 from util import save_final_kernel_png, get_noise, kernel_shift, move2cpu, tensor2im01
@@ -168,7 +169,8 @@ class DIPFKP:
                 plt.imsave(os.path.join(self.conf.output_dir_path, '{}_{}.png'.format(self.conf.img_name, iteration)),
                                         tensor2im01(sr), vmin=0, vmax=1., dpi=1)
                 print('\n Iter {}, loss: {}'.format(iteration, loss.data))
-
+        ##save kernel groundtruth
+        savemat('%s/k_%s.mat' % (self.conf.output_dir_path, self.conf.img_name.split('.')[0]), {'Kernel': self.conf.kernel_gt.cpu().numpy()})
         kernel = move2cpu(kernel.squeeze())
         save_final_kernel_png(kernel, self.conf, self.conf.kernel_gt)
 
