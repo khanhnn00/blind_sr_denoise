@@ -123,25 +123,24 @@ def my_degradation(input, kernel, scale_factor, noise_im, device=torch.device('c
 
     # blur
     output = F.conv2d(input, kernel)
-    output = output.permute(2, 3, 0, 1).squeeze(3)
 
     # down-sample
-    output = output[::scale_factor, ::scale_factor, :]
-
-    
+    output = output[:, :, ::scale_factor, ::scale_factor].permute(1,0,2,3)
 
     # add AWGN noise
-    tmp = torch.clamp(output * 255, min=0, max=255).short()
-    noises = np.random.normal(0, noise_im, output.shape)
-    noises = torch.from_numpy(noises).short().to(device)
-    output = tmp + noises
-    output = torch.clamp(output, min=0, max=255).type(torch.uint8)
-    output = (output/255.0).type(torch.FloatTensor).cpu().numpy()
-    # output += np.random.normal(0, noise_im, output.shape)
+    noises = np.random.normal(0, noise_im/255, output.shape)
+    print(noises.max(), noises.mean(), noises.min())
+    noises = torch.from_numpy(noises).type(torch.FloatTensor).to(device)
+    output = output + noises
+    print(output.shape)
+    tmp = output - noises
+    # print(tmp.shape)
+    tmp = tmp.permute(0,2,3,1).squeeze(0).cpu().numpy()
 
     # print(output.max(), output.min())
+    
 
-    return output
+    return output, tmp, noises
 
 
 def modcrop(img_in, scale):

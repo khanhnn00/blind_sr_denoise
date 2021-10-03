@@ -26,10 +26,10 @@ from NonblindSR.usrnet import USRNet
 '''
 
 
-def train(conf, lr_image):
+def train(conf, lr_image, noise):
     ''' trainer for DIPFKP, etc.'''
     model = DIPFKP(conf, lr_image)
-    kernel, sr = model.train()
+    kernel, sr = model.train(noise)
     return kernel, sr
 
 
@@ -58,7 +58,7 @@ def main():
                       help='path for trained nonblind model')
     prog.add_argument('--SR', action='store_true', default=False, help='when activated - nonblind SR is performed')
     prog.add_argument('--real', action='store_true', default=False, help='if the input is real image')
-    prog.add_argument('--noise', type=int, default=0, help='if the input is real image')
+    prog.add_argument('--noise', type=int, default=30, help='if the input is real image')
 
     # to be overwritten automatically
     prog.add_argument('--path-KP', type=str, default='../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt',
@@ -77,7 +77,7 @@ def main():
     args.path_KP = '../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt'
     # args.path_KP = '../data/pretrained_models/FKP_x4.pt'
     args.input_dir = '../../SRbenchmark/HR_x4'
-    args.output_dir = '../data/log_DIPFKP/{}_{}_3lr_x{}'.format(args.dataset, args.model, args.sf)
+    args.output_dir = '../data/log_DIPFKP/{}_x{}_{}'.format(args.dataset, args.sf, args.noise)
     args.kernel_dir = '../data/result/datasets/Kernel_validation_set_x4'
     k_list = os.listdir(args.kernel_dir)
 
@@ -100,16 +100,12 @@ def main():
         k_idx = random.randint(a=0, b=len(k_list)-1)
         k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
         conf = Config(filename, k).parse(create_params(filename, args))
-        # k_idx = random.randint(a=0, b=len(k_list)-1)
-        # k = torch.load(os.path.join(args.kernel_dir, k_list[k_idx]))
-        save_image(k.unsqueeze(0), os.path.join(conf.output_dir_path, './k_GT.png'),nrow=1,  normalize=True)
         lr_image = im2tensor01(read_image(os.path.join(args.input_dir, filename))).unsqueeze(0)
-        # print(lr_image.shape)
-        lr_image = my_degradation(lr_image, k, 4, args.noise)
-        lr = lr_image.copy()
-        lr_image = im2tensor01(lr_image).unsqueeze(0)
-        plt.imsave(os.path.join(conf.output_dir_path, '%s_LR.png' % conf.img_name), lr)
-        # print(lr_image.size())
+        lr_image, tmp, noise = my_degradation(lr_image, k, 4, args.noise)
+        lr = torch.clone(lr_image)
+        lr = tensor2im(lr)
+        plt.imsave(os.path.join(conf.output_dir_path, 'LR_minus_noise%s.png' % conf.img_name), tmp)
+        plt.imsave(os.path.join(conf.output_dir_path, 'LR_%s.png' % conf.img_name), lr)
 
         # crop the image to 960x960 due to memory limit
         if 'DIV2K' in args.input_dir:
@@ -117,7 +113,7 @@ def main():
             lr_image = lr_image[:, :, lr_image.shape[2] // 2 - crop: lr_image.shape[2] // 2 + crop,
                        lr_image.shape[3] // 2 - crop: lr_image.shape[3] // 2 + crop]
 
-        kernel, sr_dip = train(conf, lr_image)
+        kernel, sr_dip = train(conf, lr_image, noise)
         plt.imsave(os.path.join(conf.output_dir_path, '%s.png' % conf.img_name), tensor2im01(sr_dip), vmin=0,
                    vmax=1., dpi=1)
 

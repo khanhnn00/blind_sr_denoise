@@ -33,13 +33,13 @@ def make_dataset(dir, class_to_idx):
 class KernelFolder(data.Dataset):
     """A generic kernel loader"""
 
-    def __init__(self, root, train, kernel_size=11, scale_factor=2, transform=None, target_transform=None,
+    def __init__(self, root, train, kernel_size=11, scale_factor=2, noise=0, transform=None, target_transform=None,
                  loader=None):
         ''' prepare training and validation sets'''
         self.kernel_size = kernel_size
         self.scale_factor = scale_factor
         self.alpha = 1e-6
-
+        self.noise = noise
         # To normalize the pixels to [0,1], we first clamp the kernel because some values are slightly below zero. Then,
         # we rescale the maximum pixel to be near one by dividing (max_value+0.01), where 0.01 can make sure it won't be
         # larger than 1. This is crucial to remove notable noises in sampling.
@@ -60,7 +60,7 @@ class KernelFolder(data.Dataset):
                         for theta in np.arange(0, np.pi, 0.2):
                             kernel = prepare_dataset.gen_kernel_fixed(np.array([self.kernel_size, self.kernel_size]),
                                                                       np.array([self.scale_factor, self.scale_factor]),
-                                                                      sigma1, sigma2, theta, 0)
+                                                                      sigma1, sigma2, theta, self.noise)
 
                             torch.save(torch.from_numpy(kernel), os.path.join(root, str(i) + '.pth'))
                             i += 1
@@ -91,7 +91,7 @@ class KernelFolder(data.Dataset):
         if self.train:
             kernel = prepare_dataset.gen_kernel_random(np.array([self.kernel_size, self.kernel_size]),
                                                        np.array([self.scale_factor, self.scale_factor]),
-                                                       0.175 * self.scale_factor, min(2.5 * self.scale_factor, 10), 0)
+                                                       0.175 * self.scale_factor, min(2.5 * self.scale_factor, 10), self.noise)
             kernel = torch.from_numpy(kernel)
         else:
             path, target = self.kernels[index]

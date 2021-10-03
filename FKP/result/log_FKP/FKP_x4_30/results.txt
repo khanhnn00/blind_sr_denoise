@@ -1,0 +1,245 @@
+{'alpha': 1e-06,
+ 'batch_size': 100,
+ 'cond_label_size': None,
+ 'conditional': False,
+ 'device': device(type='cuda', index=0),
+ 'evaluate': False,
+ 'flip_var_order': False,
+ 'generate': True,
+ 'hidden_size': 25,
+ 'input_dims': (1, 19, 19),
+ 'input_size': 361,
+ 'kernel_size': 19,
+ 'log_interval': 500,
+ 'lr': 0.0001,
+ 'n_blocks': 5,
+ 'n_components': 1,
+ 'n_epochs': 100,
+ 'n_hidden': 1,
+ 'no_batch_norm': False,
+ 'no_cuda': False,
+ 'noise': 30,
+ 'normalization': 0.16908,
+ 'output_dir': './result/log_FKP/FKP_x4_30',
+ 'restore_file': '',
+ 'results_file': './result/log_FKP/FKP_x4_30/results.txt',
+ 'seed': 0,
+ 'sf': 4,
+ 'start_epoch': 0,
+ 'train': False,
+ 'val_save_path': './result/datasets/Kernel_validation_set_30'}
+KernelPrior(
+  (net): FlowSequential(
+    (0): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (1): BatchNorm()
+    (2): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (3): BatchNorm()
+    (4): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (5): BatchNorm()
+    (6): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (7): BatchNorm()
+    (8): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (9): BatchNorm()
+  )
+)
+{'alpha': 1e-06,
+ 'batch_size': 100,
+ 'cond_label_size': None,
+ 'conditional': False,
+ 'device': device(type='cuda', index=0),
+ 'evaluate': False,
+ 'flip_var_order': False,
+ 'generate': True,
+ 'hidden_size': 25,
+ 'input_dims': (1, 19, 19),
+ 'input_size': 361,
+ 'kernel_size': 19,
+ 'log_interval': 500,
+ 'lr': 0.0001,
+ 'n_blocks': 5,
+ 'n_components': 1,
+ 'n_epochs': 100,
+ 'n_hidden': 1,
+ 'no_batch_norm': False,
+ 'no_cuda': False,
+ 'noise': 30,
+ 'normalization': 0.16908,
+ 'output_dir': './result/log_FKP/FKP_x4_30',
+ 'restore_file': '',
+ 'results_file': './result/log_FKP/FKP_x4_30/results.txt',
+ 'seed': 0,
+ 'sf': 4,
+ 'start_epoch': 0,
+ 'train': True,
+ 'val_save_path': './result/datasets/Kernel_validation_set_30'}
+KernelPrior(
+  (net): FlowSequential(
+    (0): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (1): BatchNorm()
+    (2): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (3): BatchNorm()
+    (4): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (5): BatchNorm()
+    (6): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (7): BatchNorm()
+    (8): LinearMaskedCoupling(
+      (s_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): Tanh()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): Tanh()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+      (t_net): Sequential(
+        (0): Linear(in_features=361, out_features=25, bias=True)
+        (1): ReLU()
+        (2): Linear(in_features=25, out_features=25, bias=True)
+        (3): ReLU()
+        (4): Linear(in_features=25, out_features=361, bias=True)
+      )
+    )
+    (9): BatchNorm()
+  )
+)
+Evaluate (epoch 0): -logp(x) = nan +/- nan
+Evaluate (epoch 1): -logp(x) = nan +/- nan
+Evaluate (epoch 2): -logp(x) = nan +/- nan
+Evaluate (epoch 3): -logp(x) = nan +/- nan
+Evaluate (epoch 4): -logp(x) = nan +/- nan
+Evaluate (epoch 5): -logp(x) = nan +/- nan
+Evaluate (epoch 6): -logp(x) = nan +/- nan

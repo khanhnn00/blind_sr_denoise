@@ -12,7 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "6"
 
 import math
 import argparse
@@ -36,11 +36,12 @@ parser.add_argument('--output_dir', default='./result/log_FKP/FKP')
 parser.add_argument('--results_file', default='results.txt', help='Filename where to store settings and test results.')
 parser.add_argument('--no_cuda', action='store_true', help='Do not use cuda.')
 # data
-parser.add_argument('--sf', type=int, default=2, help='Scale factor')
+parser.add_argument('--sf', type=int, default=4, help='Scale factor')
 parser.add_argument('--kernel_size', type=int, default=11,
                     help='Kernel size. 11, 15, 19 for x2, x3, x4; to be overwritten automatically')
 parser.add_argument('--flip_var_order', action='store_true', default=False, help='')
 parser.add_argument('--seed', type=int, default=0, help='Random seed to use.')
+parser.add_argument('--noise', type=int, default=30, help='Noise level')
 # model
 parser.add_argument('--n_blocks', type=int, default=5, help='Number of blocks to stack in a model.')
 parser.add_argument('--n_components', type=int, default=1,
@@ -63,9 +64,9 @@ parser.add_argument('--log_interval', type=int, default=500, help='How often to 
 # Dataloaders
 # --------------------
 
-def fetch_dataloaders(val_save_path, kernel_size, scale_factor, batch_size, device):
-    train_dataset = KernelFolder(val_save_path, train=True, kernel_size=kernel_size, scale_factor=scale_factor)
-    test_dataset = KernelFolder(val_save_path, train=False, kernel_size=kernel_size, scale_factor=scale_factor)
+def fetch_dataloaders(val_save_path, kernel_size, scale_factor, batch_size, device, noise):
+    train_dataset = KernelFolder(val_save_path, train=True, kernel_size=kernel_size, scale_factor=scale_factor, noise=noise)
+    test_dataset = KernelFolder(val_save_path, train=False, kernel_size=kernel_size, scale_factor=scale_factor, noise=noise)
 
     input_dims = (1, test_dataset.kernel_size, test_dataset.kernel_size)
     label_size = None
@@ -301,7 +302,8 @@ if __name__ == '__main__':
     # setup kernel size, hidden_size and output dir according to scale factor
     args.kernel_size = min(args.sf * 4 + 3, 21)
     args.hidden_size = min(args.sf * 5 + 5, 25)
-    args.output_dir += '_x{}'.format(args.sf)
+    args.output_dir += '_x{}_{}'.format(args.sf, args.noise)
+    args.val_save_path += '_{}'.format(args.noise)
 
     # setup file ops
     if not os.path.isdir(args.output_dir): os.makedirs(args.output_dir)
@@ -315,7 +317,7 @@ if __name__ == '__main__':
 
     # load data
     train_dataloader, test_dataloader = fetch_dataloaders(args.val_save_path, args.kernel_size, args.sf,
-                                                          args.batch_size, args.device)
+                                                          args.batch_size, args.device, args.noise)
     args.input_size = train_dataloader.dataset.input_size
     args.input_dims = train_dataloader.dataset.input_dims
     args.cond_label_size = train_dataloader.dataset.label_size if args.conditional else None

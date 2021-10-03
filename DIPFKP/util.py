@@ -46,6 +46,7 @@ def im2tensor(im_np):
 def im2tensor01(im_np):
     """Convert numpy to tensor to the gpu"""
     im_np = im_np / 255.0 if im_np.dtype == 'uint8' else im_np
+    im_np = np.ascontiguousarray(im_np)
     return torch.FloatTensor(np.transpose(im_np, (2, 0, 1))).cuda()
 
 

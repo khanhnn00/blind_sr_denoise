@@ -68,30 +68,14 @@ class DIPFKP:
             self.net_kp.load_state_dict(state['model_state'])
             self.net_kp = self.net_kp.to(device)
             self.net_kp.eval()
-            for p in self.net_kp.parameters(): p.requires_grad = False
+            for p in self.net_kp.parameters(): p.requires_grad = True
 
             self.kernel_code = self.net_kp.base_dist.sample((1, 1)).to(device)
-            self.kernel_code.requires_grad = True
+            self.kernel_code.requires_grad = False
 
             self.optimizer_kp = SphericalOptimizer(self.kernel_size, torch.optim.Adam, [self.kernel_code],
                                                    lr=conf.kp_lr)
-
-        # baseline, softmax as kernel prior
-        elif conf.model == 'DIPSoftmax':
-            self.kernel_code =torch.ones(self.kernel_size ** 2).to(device)
-            self.kernel_code.requires_grad = True
-
-            self.optimizer_kp = torch.optim.Adam([{'params': self.kernel_code}], lr=conf.kp_lr)
-
-        # fc layers as kernel prior, accroding to Double-DIP/Selfdeblur, set lr = 1e-4
-        elif conf.model == 'DoubleDIP':
-            n_k = 200
-            self.kernel_code = get_noise(n_k, 'noise', (1, 1)).detach().squeeze().to(device)
-
-            self.net_kp = fcn(n_k, self.kernel_size ** 2).to(device)
-
-            self.optimizer_kp = torch.optim.Adam([{'params': self.net_kp.parameters()}], lr=1e-4)
-
+            # self.optimizer_kp = torch.optim.Adam([{'params':self.net_kp.parameters()}], lr=conf.kp_lr)
         # loss
         self.ssimloss = SSIM().to(device)
         self.mse = torch.nn.MSELoss().to(device)
@@ -105,16 +89,13 @@ class DIPFKP:
     # ---------------------
     '''
 
-    def train(self):
+    def train(self, noise):
         for iteration in tqdm.tqdm(range(1000), ncols=60):
             iteration += 1
 
             self.optimizer_dip.zero_grad()
-            if self.conf.model == 'DIPFKP':
-                self.optimizer_kp.opt.zero_grad()
-            else:
-                self.optimizer_kp.zero_grad()
-
+            self.optimizer_kp.opt.zero_grad()
+            # self.optimizer_kp.zero_grad()
             '''
             # ---------------------
             # (2.1) forward
@@ -125,13 +106,8 @@ class DIPFKP:
             sr = self.net_dip(self.input_dip)
 
             # generate kernel
-            if self.conf.model == 'DIPFKP':
-                kernel, logprob = self.net_kp.inverse(self.kernel_code)
-                kernel = self.net_kp.post_process(kernel)
-            elif self.conf.model == 'DIPSoftmax':
-                kernel = torch.softmax(self.kernel_code, 0).view(1, 1, self.kernel_size, self.kernel_size)
-            elif self.conf.model == 'DoubleDIP':
-                kernel = self.net_kp(self.kernel_code).view(1, 1, self.kernel_size, self.kernel_size)
+            kernel, logprob = self.net_kp.inverse(self.kernel_code)
+            kernel = self.net_kp.post_process(kernel)
 
             # blur
             sr_pad = F.pad(sr, mode='circular',
@@ -141,6 +117,8 @@ class DIPFKP:
             # downscale
             out = out[:, :, 0::self.sf, 0::self.sf]
 
+            # add noise
+            out = out + noise
             '''
             # ---------------------
             # (2.2) backward
@@ -151,6 +129,7 @@ class DIPFKP:
                 self.kernel_code.requires_grad = False
             else:
                 self.kernel_code.requires_grad = True
+
 
             # first use SSIM because it helps the model converge faster
             if iteration <= 80:
@@ -168,6 +147,8 @@ class DIPFKP:
                 save_final_kernel_png(move2cpu(kernel.squeeze()), self.conf, self.conf.kernel_gt, iteration)
                 plt.imsave(os.path.join(self.conf.output_dir_path, '{}_{}.png'.format(self.conf.img_name, iteration)),
                                         tensor2im01(sr), vmin=0, vmax=1., dpi=1)
+                plt.imsave(os.path.join(self.conf.output_dir_path, 'LR_{}_{}.png'.format(self.conf.img_name, iteration)),
+                                        tensor2im01(out), vmin=0, vmax=1., dpi=1)
                 print('\n Iter {}, loss: {}'.format(iteration, loss.data))
         ##save kernel groundtruth
         savemat('%s/k_%s.mat' % (self.conf.output_dir_path, self.conf.img_name.split('.')[0]), {'Kernel': self.conf.kernel_gt.cpu().numpy()})

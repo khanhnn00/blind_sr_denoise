@@ -80,7 +80,7 @@ class Config:
 
     def set_output_directory(self, noise):
         """Define the output directory name and create the folder"""
-        self.conf.output_dir_path = self.conf.output_dir_path + '_' + self.conf.model + '_{}'.format(str(noise)) +''
+        self.conf.output_dir_path = self.conf.output_dir_path
         if self.conf.verbose:
             self.conf.output_dir_path = os.path.join(self.conf.output_dir_path, self.conf.img_name)
             # In case the folder exists - stack 'l's to the folder name
