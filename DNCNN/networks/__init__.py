@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 from .E_arch import Estimator
+from .IRCNN import IRCNN
+
 ####################
 # initialize
 ####################
@@ -84,8 +86,10 @@ def define_net(opt):
     which_model = opt['which_model'].upper()
     print('===> Building network [%s]...'%which_model)
 
-    if which_model == 'E':
+    if which_model == 'ECNN':
         net = Estimator()
+    elif which_model == 'IRCNN':
+        net = IRCNN()
     else:
         raise NotImplementedError("Network [%s] is not recognized." % which_model)
     if torch.cuda.is_available():

@@ -7,11 +7,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.utils as thutil
+from torchvision.utils import save_image
+from loss import TVLoss, AsymLoss
 
 from networks import create_model
 from .base_solver import BaseSolver
 from networks import init_weights
-from utils import util
+import util
 
 class ESolver(BaseSolver):
     def __init__(self, opt):
@@ -20,20 +22,20 @@ class ESolver(BaseSolver):
         self.train_opt = opt['solver']
         self.input = self.Tensor()
         self.gt = self.Tensor()
+        self.clean = self.Tensor()
         self.pred = None
 
         self.records = {'train_loss': [],
+                        'val_loss': [],
+                        'psnr': [],
+                        'ssim': [],
                         'lr': []
+
         }
         self.model = create_model(opt)
 
         if self.is_train:
             self.model.train()
-
-            # set cl_loss
-            if self.use_cl:
-                self.cl_weights = self.opt['solver']['cl_weights']
-                assert self.cl_weights, "[Error] 'cl_weights' is not be declared when 'use_cl' is true"
 
             # set loss
             loss_type = self.train_opt['loss_type']
@@ -43,6 +45,9 @@ class ESolver(BaseSolver):
                 self.criterion_pix = nn.MSELoss()
             else:
                 raise NotImplementedError('Loss type [%s] is not implemented!'%loss_type)
+            
+            self.criterion_tv = TVLoss().cuda()
+            self.criterion_asym = AsymLoss().cuda()
 
             if self.use_gpu:
                 self.criterion_pix = self.criterion_pix.cuda()
@@ -67,8 +72,8 @@ class ESolver(BaseSolver):
         self.load()
         self.print_network()
 
-        print('===> Solver Initialized : [%s] || Use CL : [%s] || Use GPU : [%s]'%(self.__class__.__name__,
-                                                                                       self.use_cl, self.use_gpu))
+        print('===> Solver Initialized : [%s] || Use GPU : [%s]'%(self.__class__.__name__,
+                                                                                       self.use_gpu))
         if self.is_train:
             print("optimizer: ", self.optimizer)
             print("lr_scheduler milestones: %s   gamma: %f"%(self.scheduler.milestones, self.scheduler.gamma))
@@ -80,12 +85,18 @@ class ESolver(BaseSolver):
 
     def feed_data(self, batch, need_HR=True):
         input = batch['input']
+        clean = batch['clean']
         self.input.resize_(input.size()).copy_(input)
-
+        self.clean.resize_(clean.size()).copy_(clean)
+        # print(self.input.shape)
+        self.input.cuda()
+        self.clean.cuda()
         if need_HR:
             target = batch['output']
             self.gt.resize_(target.size()).copy_(target)
-
+            self.gt.cuda()
+        # print(self.input.shape)
+        # print(self.gt.shape)
 
     def train_step(self):
         self.model.train()
@@ -96,9 +107,11 @@ class ESolver(BaseSolver):
             with torch.autograd.set_detect_anomaly(True):
                 loss_sbatch = 0.0
                 split_LR = self.input.narrow(0, i*sub_batch_size, sub_batch_size)
-                split_HR = self.gt.narrow(0, i*sub_batch_size, sub_batch_size)
-                output = self.model(split_LR)
-                loss_sbatch = self.criterion_pix(output, split_HR)
+                split_noise = self.gt.narrow(0, i*sub_batch_size, sub_batch_size)
+                split_HR = self.clean.narrow(0, i*sub_batch_size, sub_batch_size)
+                output, noise_map = self.model(split_LR)
+                # print(output.shape, noise_map.shape)
+                loss_sbatch = self.criterion_pix(output, split_HR) + 0.05*self.criterion_tv(noise_map) + 0.5*self.criterion_asym(split_noise, noise_map)
 
                 loss_sbatch /= self.split_batch
                 loss_sbatch.backward()
@@ -120,16 +133,13 @@ class ESolver(BaseSolver):
         self.model.eval()
         with torch.no_grad():
             forward_func = self.model.forward
-            SR = forward_func(self.input)
-
-            if isinstance(SR, list):
-                self.pred = SR[-1]
-            else:
-                self.pred = SR
+            SR, noise_map = forward_func(self.input)
+            self.pred = SR
+            self.noise_map = noise_map
 
         self.model.train()
         if self.is_train:
-            loss_pix = self.criterion_pix(self.pred, self.gt)
+            loss_pix = self.criterion_pix(self.pred, self.clean)
             return loss_pix.item()
         
 
@@ -158,6 +168,21 @@ class ESolver(BaseSolver):
 
             torch.save(ckp, filename.replace('last_ckp','epoch_%d_ckp'%epoch))
 
+    def save_img(self, epoch, iter, gt, est, inp):
+        
+        """
+        save visual results for comparison
+        """
+        print('save o: {}'.format(os.path.join(self.visual_dir, 'epoch_%d_img_%d.png' % (epoch, iter + 1))))
+        gt_max, _ = gt.flatten(2).max(2, keepdim=True)
+        gt = gt / gt_max.unsqueeze(3)
+        est_max, _ = est.flatten(2).max(2, keepdim=True)
+        est = est / est_max.unsqueeze(3)
+        inp_max, _ = inp.flatten(2).max(2, keepdim=True)
+        inp = inp / inp_max.unsqueeze(3)
+        save_image(gt, os.path.join(self.visual_dir, 'output_img.png' ), nrow=7, normalize=True)
+        save_image(est, os.path.join(self.visual_dir, 'pred_img.png' ), nrow=7, normalize=True)
+        save_image(inp, os.path.join(self.visual_dir, 'input_img.png' ), nrow=7, normalize=True)
 
     def load(self):
         """
@@ -192,40 +217,44 @@ class ESolver(BaseSolver):
         return LR SR (HR) images
         """
         out_dict = OrderedDict()
-        out_dict['LR'] = self.input.data[0].float().cpu()
-        out_dict['SR'] = self.SR.data[0].float().cpu()
-        if need_np:  out_dict['LR'], out_dict['SR'] = util.Tensor2np([out_dict['LR'], out_dict['SR']],
+        out_dict['input'] = self.input.data[0].float().cpu()
+        out_dict['noise_pred'] = self.noise_map.data[0].float().cpu()
+        out_dict['img_pred'] = self.pred.data[0].float().cpu()
+        out_dict['img_gt'] = self.clean.data[0].float().cpu()
+        print(out_dict['img_pred'].shape, out_dict['img_gt'].shape)
+        out_dict['input'], out_dict['img_pred'], out_dict['img_gt'] = util.Tensor2np([out_dict['input'], out_dict['img_pred'], out_dict['img_gt']],
                                                                         self.opt['rgb_range'])
         if need_HR:
-            out_dict['HR'] = self.gt.data[0].float().cpu()
-            if need_np: out_dict['HR'] = util.Tensor2np([out_dict['HR']],
-                                                           self.opt['rgb_range'])[0]
+            out_dict['noise_gt'] = self.gt.data[0].float().cpu()
+            # out_dict['noise_gt'] = util.Tensor2np([out_dict['noise_gt']],
+            #                                             self.opt['rgb_range'])[0]
         return out_dict
 
-
-    def save_current_visual(self, epoch, iter):
+    def save_current_visual(self, epoch, iter, visual_gt, visual, type='img'):
         """
         save visual results for comparison
         """
         if epoch % self.save_vis_step == 0:
             visuals_list = []
-            visuals = self.get_current_visual(need_np=False)
-            visuals_list.extend([util.quantize(visuals['HR'].squeeze(0), self.opt['rgb_range']),
-                                 util.quantize(visuals['SR'].squeeze(0), self.opt['rgb_range'])])
+            for i in range(10):
+                visuals_list.extend([util.quantize(visual_gt[i].squeeze(0), self.opt['rgb_range']),
+                                    util.quantize(visual[i].squeeze(0), self.opt['rgb_range'])])
             visual_images = torch.stack(visuals_list)
             visual_images = thutil.make_grid(visual_images, nrow=2, padding=5)
             visual_images = visual_images.byte().permute(1, 2, 0).numpy()
-            misc.imsave(os.path.join(self.visual_dir, 'epoch_%d_img_%d.png' % (epoch, iter + 1)),
-                        visual_images)
+            if type == 'img':
+                misc.imsave(os.path.join(self.visual_dir, 'img_epoch_%d.png' % (epoch)),
+                            visual_images)
+            else:
+                misc.imsave(os.path.join(self.visual_dir, 'noise_epoch_%d.png' % (epoch)),
+                            visual_images)
 
 
     def get_current_learning_rate(self):
         return self.optimizer.param_groups[0]['lr']
 
-
     def update_learning_rate(self, epoch):
         self.scheduler.step(epoch)
-
 
     def get_current_log(self):
         log = OrderedDict()
@@ -235,13 +264,11 @@ class ESolver(BaseSolver):
         log['records'] = self.records
         return log
 
-
     def set_current_log(self, log):
         self.cur_epoch = log['epoch']
         self.best_pred = log['best_pred']
         self.best_epoch = log['best_epoch']
         self.records = log['records']
-
 
     def save_current_log(self):
         data = {}
@@ -253,7 +280,6 @@ class ESolver(BaseSolver):
         )
         data_frame.to_csv(os.path.join(self.records_dir, 'train_records.csv'),
                           index_label='epoch')
-
 
     def print_network(self):
         """

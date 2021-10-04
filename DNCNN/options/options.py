@@ -5,11 +5,10 @@ import json
 
 import torch
 
-from utils import util
+import util
 
 def get_timestamp():
     return datetime.now().strftime('%y%m%d-%H%M%S')
-
 
 def parse(opt_path):
     # remove comments starting with '//'
@@ -21,7 +20,6 @@ def parse(opt_path):
     opt = json.loads(json_str, object_pairs_hook=OrderedDict)
 
     opt['timestamp'] = get_timestamp()
-    scale = opt['scale']
     rgb_range = opt['rgb_range']
 
     # export CUDA_VISIBLE_DEVICES
@@ -36,15 +34,13 @@ def parse(opt_path):
     for phase, dataset in opt['datasets'].items():
         phase = phase.split('_')[0]
         dataset['phase'] = phase
-        dataset['scale'] = scale
         dataset['rgb_range'] = rgb_range
         
     # for network initialize
-    opt['networks']['scale'] = opt['scale']
     network_opt = opt['networks']
 
-    config_str = '%s_in%df%d_x%d'%(network_opt['which_model'].upper(), network_opt['in_channels'],
-                                                        network_opt['num_features'], opt['scale'])
+    config_str = '%s_in%df%d'%(network_opt['which_model'].upper(), network_opt['in_channels'],
+                                                        network_opt['num_features'])
     exp_path = os.path.join(os.getcwd(), 'experiments', config_str)
 
     if opt['is_train'] and opt['solver']['pretrain']:

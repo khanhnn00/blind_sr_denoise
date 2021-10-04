@@ -1,7 +1,6 @@
 {
     "mode": "sr",
     "gpu_ids": [1],
-
     "is_train": true,
     "rgb_range": 1,
     "save_image": true,
@@ -9,25 +8,33 @@
     "datasets": {
         "train": {
             "mode": "LRHR",
-            "dataroot_HR": "../../dataset/result_noise/HR_x4_npy",
+            "dataroot": "../../SRbenchmark/HR_x4",
+            "kernelroot": "../data/result/datasets/Kernel_validation_set_x4",
+            "rgb_range": 1,
             "data_type": "img",
             "n_workers": 0,
-            "batch_size": 128,
+            "batch_size": 64,
             "patch_size": 128,
             "use_flip": true,
             "use_rot": true,
-            "noise": "."
+            "noise": ".",
+            "train": true
         },
         "val": {
             "mode": "LRHR",
-            "dataroot_HR": "../SRbenchmark/HR_x4",
-            "dataroot_LR": "../SRbenchmark/LR_x4",
-            "data_type": "img"
+            "dataroot": "../../SRbenchmark/Set14",
+            "data_type": "img",
+            "train": true,
+            "patch_size": 128,
+            "kernelroot": "../data/result/datasets/Kernel_validation_set_x4"
         }
     },
 
     "networks": {
-        "which_model": "ECNN"
+        "which_model": "IRCNN",
+        "in_channels": 3,
+        "out_channels": 1,
+        "num_features": 32
     },
     
     "solver": {
@@ -39,10 +46,10 @@
         "lr_gamma": 0.5,
         "loss_type": "l1",
         "manual_seed": 0,
-        "num_epochs": 500,
+        "num_epochs": 120,
         "skip_threshold": 3,
-        "split_batch": 2,
-        "save_ckp_step": 500,
+        "split_batch": 1,
+        "save_ckp_step": 50,
         "save_vis_step": 1,
         "pretrain": null,
         "pretrained_path": "./experiments/EDSR_V3_in3f256_x4/epochs/last_ckp.pth"

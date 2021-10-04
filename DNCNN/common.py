@@ -71,18 +71,16 @@ def read_img(path):
 # image processing
 # process on numpy image
 ####################
-def np2Tensor(l, rgb_range):
-    def _np2Tensor(img):
-        #if img.shape[2] == 3: # for opencv imread
-        #    img = img[:, :, [2, 1, 0]]
-        np_transpose = np.ascontiguousarray(img.transpose((2, 0, 1)))
-        tensor = torch.from_numpy(np_transpose.copy()).type(torch.FloatTensor).cuda().unsqueeze(0)
-        tensor.mul_(rgb_range / 255.)
+def im2tensor01(im_np):
+    """Convert numpy to tensor to the gpu"""
+    im_np = im_np / 255.0 if im_np.dtype == 'uint8' else im_np
+    im_np = np.ascontiguousarray(im_np)
+    return torch.FloatTensor(np.transpose(im_np, (2, 0, 1)))
 
-        return tensor
-
-    return [_np2Tensor(_l) for _l in l]
-
+def tensor2im(im_t):
+    """Copy the tensor to the cpu & convert to range [0,255]"""
+    im_np = np.clip(np.round((np.transpose(im_t.squeeze(0).detach().cpu().float().numpy(), (1, 2, 0)) + 1) / 2.0 * 255.0), 0, 255)
+    return im_np.astype(np.uint8)
 
 def get_patch(img_tar, patch_size):
     oh, ow = img_tar.shape[:2]

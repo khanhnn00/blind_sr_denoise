@@ -1,12 +1,14 @@
 import torch.utils.data as data
 
-from data import common
-import random
-from data import prepare_dataset
+import prepare_dataset
 import numpy as np
 import torch
-from DNCNN import common
+import common
+import random
 import torch.nn.functional as F
+import os
+import os.path as osp
+import matplotlib.pyplot as plt
 
 def logit(x):
     """
@@ -22,20 +24,24 @@ class NoiseDataset(data.Dataset):
     '''
 
     def name(self):
-        return (self.opt['dataroot_HR'].split('/')[-1])
+        return (self.opt['dataroot'].split('/')[-1])
 
 
-    def __init__(self, img_path):
+    def __init__(self, opt):
         super(NoiseDataset, self).__init__()
-        self.paths_HR = img_path
+        self.opt = opt
+        self.train = opt["train"]
+        self.path = opt['dataroot']
+        self.imgs = os.listdir(opt['dataroot'])
+        self.k_root = opt["kernelroot"]
+        self.len_k = len(os.listdir(self.k_root))-1
+        self.rgb = opt['rgb_range']
+        self.alpha = 1e-6
         self.scale_factor = 4
+        self.patch_size = opt["patch_size"]
         self.kernel_size = 19
         self.sigma = random.randrange(0, 40, step=5)
-        self.normalization = round(prepare_dataset.gen_kernel_fixed(np.array([self.kernel_size, self.kernel_size]),
-                                                                    np.array([self.scale_factor, self.scale_factor]),
-                                                                    0.175 * self.scale_factor,
-                                                                    0.175 * self.scale_factor, 0,
-                                                                    0).max(), 5) + 0.01
+    
 
     def __getitem__(self, idx):
         """
@@ -45,55 +51,49 @@ class NoiseDataset(data.Dataset):
         Returns:
             tuple: (kernel, None)
         """
-        kernel = prepare_dataset.gen_kernel_random(np.array([self.kernel_size, self.kernel_size]),
-                                                    np.array([self.scale_factor, self.scale_factor]),
-                                                    0.175 * self.scale_factor, min(2.5 * self.scale_factor, 10), self.noise)
-        kernel = torch.from_numpy(kernel)
-
-        # Normalization
-        kernel = torch.clamp(kernel, min=0) / self.normalization
-        kernel = kernel + np.random.rand(*kernel.shape) / 720.0
-        kernel = logit(self.alpha + (1 - 2 * self.alpha) * kernel)
-        kernel = kernel.to(torch.float32)
+        k_idx = random.randint(a=0, b=self.len_k)
+        kernel = torch.load(os.path.join(self.k_root,os.listdir(self.k_root)[k_idx]))
 
         hr, hr_path = self._load_file(idx)
         if self.train:
             hr = self._get_patch(hr)
-        hr_tensor = common.np2Tensor([hr], 1)[0].permute(1, 0, 2, 3)
-
-        kernel = kernel.type(torch.FloatTensor).cuda().unsqueeze(0).unsqueeze(0)
-        input = F.pad(hr_tensor, pad=(kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2),
+        hr_tensor = common.im2tensor01(hr).unsqueeze(0)
+        hr_tensor = hr_tensor.type(torch.FloatTensor).permute(1, 0, 2, 3)
+        kernel = kernel.type(torch.FloatTensor).unsqueeze(0).unsqueeze(0)
+        input = F.pad(hr_tensor, pad=(self.kernel_size // 2, self.kernel_size// 2, self.kernel_size // 2,self.kernel_size // 2),
                   mode='circular')
         output = F.conv2d(input, kernel)
-
         # down-sample
         output = output[:, :, ::self.scale_factor, ::self.scale_factor].permute(1,0,2,3)
+        # print(output.shape)
 
         # add AWGN noise
         noises = np.random.normal(0, self.sigma/255, output.shape)
-        noises = torch.from_numpy(noises).type(torch.FloatTensor).cuda()
+        noises = torch.from_numpy(noises).type(torch.FloatTensor)
         noise_img = output + noises
-
-        return {'input':noise_img, 'output':noises}
+        # lr = common.tensor2im(noise_img)
+        # plt.imsave('LR_noise.png', lr)
+        # sr = common.tensor2im(output)
+        # plt.imsave('clean.png', sr)
+        return {'input':noise_img.squeeze(0), 'output':noises.squeeze(0), 'clean': output.squeeze(0)}
 
     def __len__(self):
-        return len(self.paths_HR)
+        return len(self.imgs)
 
     def _get_index(self, idx):
         if self.train:
-            return idx % len(self.paths_HR)
+            return idx % len(self.imgs)
         else:
             return idx
 
     def _load_file(self, idx):
         idx = self._get_index(idx)
-        hr_path = self.paths_HR[idx]
-        hr = common.read_img(hr_path)
+        hr_path = self.imgs[idx]
+        hr = common.read_img(osp.join(self.path,hr_path))
 
         return hr, hr_path
 
     def _get_patch(self, hr):
-
         hr = common.get_patch(hr, self.patch_size)
         hr = common.augment([hr])[0]
         return hr 
