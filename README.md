@@ -9,11 +9,11 @@
 First you need to place the pre-trained weight of KP and NP to anywhere you want.
 
 Next, run the following command:
-    ```
-    cd DIPFKP
-    
-    python main.py --SR --sf 4 --dataset Test
-    ```
+
+```
+cd DIPFKP
+python main.py --SR --sf 2 --dataset Set5
+```
 
 **BEFORE RUN**: please make sure that you edit the **overwritting paths, DECLARE PATH AT THIS SECTION** in the above file.
 
