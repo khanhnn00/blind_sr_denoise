@@ -66,7 +66,7 @@ def main():
     # to be overwritten automatically
     prog.add_argument('--path-KP', type=str, default='../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt',
                       help='path for trained kernel prior')
-    prog.add_argument('--path-NP', type=str, default='../DNCNN/experiments/IRCNN_in3f32/epochs/best_ckp.pth',
+    prog.add_argument('--path-NP', type=str, default='../DNCNN/experiments/model_state_60',
                       help='path for trained kernel prior')
     prog.add_argument('--kernel-dir', type=str, default='../data/result/datasets/Kernel_validation_set_x4',
                       help='path for trained kernel prior')
@@ -78,7 +78,7 @@ def main():
 
     args = prog.parse_args()
 
-    # overwritting paths
+    # overwritting paths, DECLARE PATH AT THIS SECTION
     args.path_KP = '../data/result/log_FKP/FKP_x4/best_model_checkpoint.pt'
     args.path_NP = '../DNCNN/experiments/model_state_60'
     # args.path_NP = '../DNCNN/CBDNet/epochs/best_ckp.pth'

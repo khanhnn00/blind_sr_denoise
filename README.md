@@ -1,20 +1,31 @@
+# A Demonstration of Single Image Super-Resolution
+### Setup
+0. **Minimum requirements.** This project was originally developed with Python 3.6, PyTorch 1.7 and CUDA 11.1. The training requires at least a Titan X GPUs (12Gb memory each).
+1. **Setup your Python environment.** Please, clone the repository and install the dependencies. We recommend using Anaconda 3 distribution:
+    ```
+    conda create -n <environment_name> --file requirements.txt
+    ```
 
-# Flow-based Kernel Prior with Application to Blind Super-Resolution (FKP), CVPR2021
+3. **Download pre-trained models.** For running the code, you need to download the two pre-trained weights of Kernel Prior (KP) and Noise Prior (NP) module. Here we use FKP as KP and VDNet as NP. The pretrained weight can be found [here](https://drive.google.com/drive/folders/1PVGobcRyYqHwnT2MhUUSLb6xZK5h0-B1?usp=sharing)
 
-This repository is the official PyTorch implementation of Flow-based Kernel Prior with Application to Blind Super-Resolution 
-([arxiv](https://arxiv.org/pdf/2103.15977.pdf), [supp](https://github.com/JingyunLiang/FKP/releases)).
+### How to Run
 
-:rocket:  :rocket:  :rocket: **News**: 
- - Aug. 18, 2021: See our recent work for [blind SR: Mutual Affine Network for Spatially Variant Kernel Estimation in Blind Image Super-Resolution (MANet), ICCV2021](https://github.com/JingyunLiang/MANet)
- - Aug. 18, 2021: See our recent work for [flow-based generative modelling of image SR: Hierarchical Conditional Flow: A Unified Framework for Image Super-Resolution and Image Rescaling (HCFlow), ICCV2021](https://github.com/JingyunLiang/HCFlow)
- - Aug. 18, 2021: See our recent work for [real-world image SR: Designing a Practical Degradation Model for Deep Blind Image Super-Resolution (BSRGAN), ICCV2021](https://github.com/cszn/BSRGAN)
- 
- ---
+First you need to place the pre-trained weight of KP and NP to anywhere you want.
 
-> Kernel estimation is generally one of the key problems for blind image super-resolution (SR). Recently, Double-DIP proposes to model the kernel via a network architecture prior, while KernelGAN employs the deep linear network and several regularization losses to constrain the kernel space. However, they fail to fully exploit the general SR kernel assumption that anisotropic Gaussian kernels are sufficient for image SR. To address this issue, this paper proposes a normalizing flow-based kernel prior (FKP) for kernel modeling. By learning an invertible mapping between the anisotropic Gaussian kernel distribution and a tractable latent distribution, FKP can be easily used to replace the kernel modeling modules of Double-DIP and KernelGAN. Specifically, FKP optimizes the kernel in the latent space rather than the network parameter space, which allows it to generate reasonable kernel initialization, traverse the learned kernel manifold and improve the optimization stability. Extensive experiments on synthetic and real-world images demonstrate that the proposed FKP can significantly improve the kernel estimation accuracy with less parameters, runtime and memory usage, leading to state-of-the-art blind SR results.
-><p align="center">
-  > <img height="120" src="./data/illustrations/FKP.png"><img height="120" src="./data/illustrations/DIPFKP.png"><img height="120" src="./data/illustrations/KernelGANFKP.png">
-</p>
+Next, run the following command:
+    ```
+    python ./DIPFKP/main.py
+    ```
+
+**BEFORE RUN**: please make sure that you edit the **overwritting paths, DECLARE PATH AT THIS SECTION** in the above file.
+
+By default, the results should appear in the following path: ./data/log_DIPFKP/{dataset_name}_x{scale}_{noise_level}
+
+## Acknowledgements
+We thank Jingyun Liang for releasing his [code](https://github.com/JingyunLiang/FKP) that helped in the early stages of this project.
+We also thank Zongsheng Yue for the work at [this](https://github.com/zsyOAOA/VDNet) which contributes to the NP module of our project.
+
+
 
 ## Requirements
 - Python 3.6, PyTorch >= 1.6 
