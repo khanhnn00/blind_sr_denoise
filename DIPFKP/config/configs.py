@@ -17,6 +17,7 @@ class Config:
         self.conf = None
         self.k_gt = k_gt
         self.img_name = img_name
+        
 
         # Model
         self.parser.add_argument('--model', default='DIPFKP', help='models: DIPFKP, DIPSOFTMAX, DoubleDIP.')
@@ -28,6 +29,8 @@ class Config:
         self.parser.add_argument('--output_dir_path', default=os.path.dirname(__file__) + '/results',
                                  help='results path')
         self.parser.add_argument('--path_KP', default='', help='path for trained kernel prior')
+        self.parser.add_argument('--path_NP', default='', help='path for trained kernel prior')
+
 
         # Sizes
         self.parser.add_argument('--sf', type=int, default=2, help='The upsampling scale factor')
@@ -76,7 +79,9 @@ class Config:
 
     def clean_file_name(self):
         """Retrieves the clean image file_name for saving purposes"""
+        self.conf.ext = self.img_name.split('/')[-1].split('.')[-1]
         self.conf.img_name = self.img_name.split('/')[-1].split('.')[0]
+        
 
     def set_output_directory(self, noise):
         """Define the output directory name and create the folder"""

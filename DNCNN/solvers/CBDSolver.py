@@ -15,9 +15,9 @@ from .base_solver import BaseSolver
 from networks import init_weights
 import util
 
-class ESolver(BaseSolver):
+class CBDSolver(BaseSolver):
     def __init__(self, opt):
-        super(ESolver, self).__init__(opt)
+        super(CBDSolver, self).__init__(opt)
         self.opt = opt
         self.train_opt = opt['solver']
         self.input = self.Tensor()
@@ -151,7 +151,8 @@ class ESolver(BaseSolver):
         print('===> Saving last checkpoint to [%s] ...]'%filename)
         ckp = {
             'epoch': epoch,
-            'state_dict': self.model.state_dict(),
+            'unet_state_dict': self.model.module.unet.state_dict(),
+            'est_state_dict': self.model.module.est.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'best_pred': self.best_pred,
             'best_epoch': self.best_epoch,
@@ -195,7 +196,8 @@ class ESolver(BaseSolver):
             print('===> Loading model from [%s]...' % model_path)
             if self.is_train:
                 checkpoint = torch.load(model_path)
-                self.model.load_state_dict(checkpoint['state_dict'])
+                self.model.module.unet.load_state_dict(checkpoint['unet_state_dict'])
+                self.model.module.est.load_state_dict(checkpoint['est_state_dict'])
 
                 if self.opt['solver']['pretrain'] == 'resume':
                     self.cur_epoch = checkpoint['epoch'] + 1
@@ -206,8 +208,12 @@ class ESolver(BaseSolver):
 
             else:
                 checkpoint = torch.load(model_path)
-                if 'state_dict' in checkpoint.keys(): checkpoint = checkpoint['state_dict']
-                load_func = self.model.module.load_state_dict if isinstance(self.model, nn.DataParallel) \
+                if 'unet_state_dict' in checkpoint.keys(): checkpoint = checkpoint['unet_state_dict']
+                load_func = self.model.module.unet.load_state_dict if isinstance(self.model.module.unet, nn.DataParallel) \
+                    else self.model.module.unet.load_state_dict
+                load_func(checkpoint)
+                if 'est_state_dict' in checkpoint.keys(): checkpoint = checkpoint['est_state_dict']
+                load_func = self.model.module.est.load_state_dict if isinstance(self.model.module.unet, nn.DataParallel) \
                     else self.model.module.load_state_dict
                 load_func(checkpoint)
 

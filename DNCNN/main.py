@@ -6,7 +6,7 @@ import torch
 import options.options as option
 import util
 import os
-from solvers import create_solver
+from solvers import create_solver, create_cbd_solver
 from dataloader import create_dataset, create_dataloader
 import numpy as np
 
@@ -41,7 +41,8 @@ def main():
         else:
             raise NotImplementedError("[Error] Dataset phase [%s] in *.json is not recognized." % phase)
 
-    solver = create_solver(opt)
+    # solver = create_solver(opt)
+    solver = create_cbd_solver(opt)
     model_name = opt['networks']['which_model'].upper()
     print(model_name)
 

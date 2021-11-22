@@ -10,12 +10,15 @@ from .networks import skip, fcn
 from .SSIM import SSIM
 from scipy.io import savemat
 
+
 sys.path.append('../')
 from util import save_final_kernel_png, get_noise, kernel_shift, move2cpu, tensor2im01
 
 sys.path.append('../../')
 from FKP.network import KernelPrior
-
+from .VDNet import VDN
+from DNCNN.networks.IRCNN import IRCNN
+from DNCNN.loss import TVLoss, AsymLoss
 '''
 # ------------------------------------------
 # models of DIPFKP, etc.
@@ -30,19 +33,24 @@ class DIPFKP:
     # ------------------------------------------
     '''
 
-    def __init__(self, conf, lr, device=torch.device('cuda')):
+    def __init__(self, conf, lr, hr_noise, noise, device=torch.device('cuda')):
 
         # Acquire configuration
         self.conf = conf
         # print(conf)
         self.lr = lr
+        self.hr_noise = hr_noise
         self.sf = conf.sf
         self.kernel_size = min(conf.sf * 4 + 3, 21)
+
+        self.noise = noise.type(torch.FloatTensor).cuda()
 
         # DIP model
         _, C, H, W = self.lr.size()
         
         self.input_dip = get_noise(C, 'noise', (H * self.sf, W * self.sf)).to(device).detach()
+        # self.noise_prior = nn.DataParallel(IRCNN()).to(device)
+        # for p in self.noise_prior.parameters(): p.requires_grad=True
         self.net_dip = skip(C, 3,
                             num_channels_down=[128, 128, 128, 128, 128],
                             num_channels_up=[128, 128, 128, 128, 128],
@@ -51,6 +59,18 @@ class DIPFKP:
                             need_sigmoid=True, need_bias=True, pad='reflection', act_fun='LeakyReLU')
         self.net_dip = self.net_dip.to(device)
         self.optimizer_dip = torch.optim.Adam([{'params': self.net_dip.parameters()}], lr=conf.dip_lr)
+
+        self.net_np = VDN(3, slope=0.2, wf=64, dep_U=4)
+        self.net_np = torch.nn.DataParallel(self.net_np).cuda()
+
+        state = torch.load('../DNCNN/experiments/model_state_niidgauss')
+        self.net_np.load_state_dict(state)
+
+        # self.net_np = IRCNN()
+        # self.net_np = torch.nn.DataParallel(self.net_np).cuda()
+        # state = torch.load('../DNCNN/experiments/CBDNet/epochs/best_ckp.pth')
+        # self.net_np.load_state_dict(state['state_dict'])
+        # for p in self.net_np.parameters(): p.requires_grad = False
 
         # normalizing flow as kernel prior
         if conf.model == 'DIPFKP':
@@ -63,7 +83,6 @@ class DIPFKP:
 
             self.net_kp = KernelPrior(n_blocks=5, input_size=self.kernel_size ** 2, hidden_size=min((self.sf+1)*5, 25),
                                       n_hidden=1)
-
             state = torch.load(conf.path_KP)
             self.net_kp.load_state_dict(state['model_state'])
             self.net_kp = self.net_kp.to(device)
@@ -80,6 +99,7 @@ class DIPFKP:
         self.ssimloss = SSIM().to(device)
         self.mse = torch.nn.MSELoss().to(device)
         self.laplace_penalty = HyperLaplacianPenalty(3, 0.66).cuda()
+        self.tv_loss = TVLoss()
 
         print('*' * 60 + '\nSTARTED {} on: {}...'.format(conf.model, conf.input_image_path))
 
@@ -89,13 +109,37 @@ class DIPFKP:
     # ---------------------
     '''
 
-    def train(self, noise):
-        for iteration in tqdm.tqdm(range(1000), ncols=60):
+    def train(self):
+
+        # self.optimizer_np = torch.optim.Adam([{'params': self.noise_prior.parameters()}], lr=1e-5)
+        # phi_Z = self.net_np(self.lr, 'test')
+        # nm = phi_Z[:, :3, ].detach().data
+        # dn = self.lr-phi_Z[:, :3, ].detach().data
+        # plt.imsave(os.path.join(self.conf.output_dir_path, 'denoise_{}.png'.format(self.conf.img_name)),
+        #                                 tensor2im01(dn), vmin=0, vmax=1., dpi=1)
+        # plt.imsave(os.path.join(self.conf.output_dir_path, 'noise_map_{}.png'.format(self.conf.img_name)),
+        #                                 tensor2im01(nm), vmin=0, vmax=1., dpi=1)
+        # print(phi_Z.shape)
+        # y, x = phi_Z.shape[2], phi_Z.shape[3]
+        # print(phi_Z.shape)
+        # print(self.lr.shape)
+        # print(lr_image_pad.shape)
+
+        # this_lr = self.lr - phi_Z[:, :3, ]
+
+        # phi_Zz = self.net_np(self.hr_noise, 'test')
+        # this_hr = self.hr_noise - phi_Zz[:, :3, ]
+        # plt.imsave(os.path.join(self.conf.output_dir_path, 'denoise_test_HR_{}.png'.format(self.conf.img_name)),
+        #                                 tensor2im01(this_hr), vmin=0, vmax=1., dpi=1)
+
+        for iteration in tqdm.tqdm(range(600), ncols=60):
             iteration += 1
 
             self.optimizer_dip.zero_grad()
             self.optimizer_kp.opt.zero_grad()
+            # self.optimizer_np.zero_grad()
             # self.optimizer_kp.zero_grad()
+            
             '''
             # ---------------------
             # (2.1) forward
@@ -114,11 +158,24 @@ class DIPFKP:
                        pad=(self.kernel_size // 2, self.kernel_size // 2, self.kernel_size // 2, self.kernel_size // 2))
             out = F.conv2d(sr_pad, kernel.expand(3, -1, -1, -1), groups=3)
 
+            
+
             # downscale
             out = out[:, :, 0::self.sf, 0::self.sf]
 
             # add noise
-            out = out + noise
+
+            #groundtruth noise
+            out = out + self.noise
+
+            # #not VDNet
+            # _, noise = self.net_np(self.lr)
+            # out = out + noise
+
+            #VDNet
+            # phi_Z = self.net_np(self.lr, 'test')
+            # out = out + phi_Z[:, :3, ]
+            
             '''
             # ---------------------
             # (2.2) backward
@@ -137,17 +194,20 @@ class DIPFKP:
                 # loss += 2e-2 * self.laplace_penalty(sr)
             else:
                 loss = self.mse(out, self.lr)
-                # loss += 2e-2 * self.laplace_penalty(sr)
+                # loss += 0.003 * self.tv_loss(out)
 
             loss.backward()
             self.optimizer_dip.step()
             self.optimizer_kp.step()
+            # self.optimizer_np.step()
 
             if (iteration % 200 == 0):
+                # phi_Z = self.net_np(sr, 'test')
+                # sr = sr - phi_Z[:, :3, ]
                 save_final_kernel_png(move2cpu(kernel.squeeze()), self.conf, self.conf.kernel_gt, iteration)
-                plt.imsave(os.path.join(self.conf.output_dir_path, '{}_{}.png'.format(self.conf.img_name, iteration)),
+                plt.imsave(os.path.join(self.conf.output_dir_path, '{}_{}.{}'.format(self.conf.img_name, iteration, self.conf.ext)),
                                         tensor2im01(sr), vmin=0, vmax=1., dpi=1)
-                plt.imsave(os.path.join(self.conf.output_dir_path, 'LR_{}_{}.png'.format(self.conf.img_name, iteration)),
+                plt.imsave(os.path.join(self.conf.output_dir_path, 'LR_{}_{}.{}'.format(self.conf.img_name, iteration, self.conf.ext)),
                                         tensor2im01(out), vmin=0, vmax=1., dpi=1)
                 print('\n Iter {}, loss: {}'.format(iteration, loss.data))
         ##save kernel groundtruth

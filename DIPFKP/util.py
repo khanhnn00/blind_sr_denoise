@@ -1,3 +1,4 @@
+from genericpath import exists
 import os
 import time
 import torch
@@ -251,12 +252,11 @@ def save_final_kernel_png(k, conf, gt_kernel, step=''):
     """saves the final kernel and the analytic kernel to the results folder"""
     os.makedirs(os.path.join(conf.output_dir_path), exist_ok=True)
     savepath_mat = os.path.join(conf.output_dir_path, '%s.mat' % conf.img_name)
-    savepath_png = os.path.join(conf.output_dir_path, '%s_kernel.png' % conf.img_name)
+    savepath_png = os.path.join(conf.output_dir_path, 'kernel_%s.png' % conf.img_name)
     if step != '':
-        savepath_mat = savepath_mat.replace('.mat', '_{}.mat'.format(step))
+        # savepath_mat = savepath_mat.replace('.mat', '_{}.mat'.format(step))
         savepath_png = savepath_png.replace('.png', '_{}.png'.format(step))
 
-    sio.savemat(savepath_mat, {'Kernel': k})
     plot_kernel(gt_kernel.numpy(), k, savepath_png)
 
 
@@ -394,6 +394,17 @@ def modcrop(img_in, scale):
         raise ValueError('Wrong img ndim: [{:d}].'.format(img.ndim))
     return img
 
+def crop_vdnet(img_in, scale=8):
+    # img_in: Numpy, HWC or HW
+    img = np.copy(img_in)
+    if img.ndim == 3:
+        H, W, C = img.shape
+        H_r, W_r = H % scale, W % scale
+        img = img[:H - H_r, :W - W_r, :]
+    else:
+        raise ValueError('Wrong img ndim: [{:d}].'.format(img.ndim))
+    return img
+
 
 def rgb2ycbcr(img, only_y=True):
     '''same as matlab rgb2ycbcr
@@ -419,7 +430,7 @@ def rgb2ycbcr(img, only_y=True):
     return rlt.astype(in_img_type)
 
 
-def evaluation_dataset(input_dir, conf, used_iter=''):
+def evaluation_dataset(input_dir, output_dir_path, sf=4, used_iter=''):
     ''' Evaluate the model with kernel and image PSNR'''
     print('Calculating PSNR...')
     filesource = os.listdir(os.path.abspath(input_dir))
@@ -433,40 +444,78 @@ def evaluation_dataset(input_dir, conf, used_iter=''):
         # if conf.real:
         #     kernel_gt = np.ones([min(conf.sf * 4 + 3, 21), min(conf.sf * 4 + 3, 21)])
         # else:
-        path = os.path.join(conf.output_dir_path, 'k_{}'.format(filename)).replace('.png', '.mat')
-        kernel_gt = sio.loadmat(path)['Kernel']
+        # path = os.path.join(output_dir_path, 'k_{}'.format(filename)).replace(filename.split('.')[-1], 'mat')
+        # kernel_gt = sio.loadmat(path)['Kernel']
 
         # # load estimated kernel
-        path = os.path.join(conf.output_dir_path, filename).replace('.png', '.mat')
-        kernel = sio.loadmat(path)['Kernel']
+        # path = os.path.join(output_dir_path, 'k_{}'.format(filename)).replace(filename.split('.')[-1], 'mat')
+        # kernel = sio.loadmat(path)['Kernel']
 
         # calculate psnr
-        kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
+        # kernel_psnr += calculate_psnr(kernel_gt, kernel, is_kernel=True)
+        kernel_psnr = 0
 
         # load HR
         path = os.path.join(input_dir, filename)
         hr = read_image(path)
-        hr = modcrop(hr, conf.sf)
+        hr = modcrop(hr, sf)
+        # hr = crop_vdnet(hr, 8)
 
         # load SR
-        path = os.path.join(conf.output_dir_path, filename)
-        sr = read_image(path)
-
+        try:
+            path = os.path.join(output_dir_path, filename)
+            sr = read_image(path)
+        except FileNotFoundError:
+            print(filename)
+            if filename.split('.')[-1] == 'png':
+                path = os.path.join(output_dir_path, filename.replace('png', 'jpg'))
+            else:
+                path = os.path.join(output_dir_path, filename.replace('jpg', 'png'))
+            sr = read_image(path)
+        if hr.shape[1] < sr.shape[1]:
+            min_x = hr.shape[1]
+        else:
+            min_x = sr.shape[1]
+        
+        if hr.shape[0] < sr.shape[0]:
+            min_y = hr.shape[0]
+        else:
+            min_y = sr.shape[0] 
+        # print('before')
+        # print(hr.shape, sr.shape)
+        # print('min')
+        # print(min_x, min_y)
+        cropped_hr = hr[:min_y, :min_x, :]
+        cropped_sr = sr[:min_y, :min_x, :]
+        # print('middle')
+        # print(cropped_hr.shape, cropped_sr.shape)
         # calculate psnr
         hr = rgb2ycbcr(hr / 255., only_y=True)
         sr = rgb2ycbcr(sr / 255., only_y=True)
-        crop_border = conf.sf
-        cropped_hr = hr[crop_border:-crop_border, crop_border:-crop_border]
-        cropped_sr = sr[crop_border:-crop_border, crop_border:-crop_border]
+        crop_border = 4
+        cropped_hr = cropped_hr[crop_border:-crop_border, crop_border:-crop_border]
+        cropped_sr = cropped_sr[crop_border:-crop_border, crop_border:-crop_border]
+        # print('After')
+        # print(cropped_hr.shape, cropped_sr.shape)
         im_psnr += calculate_psnr(cropped_hr * 255, cropped_sr * 255)
         im_ssim += calculate_ssim(cropped_hr * 255, cropped_sr * 255)
+        # print('*********************************************')
+        if not exists(os.path.join(output_dir_path, 'HR')):
+            os.mkdir(os.path.join(output_dir_path, 'HR'))
 
+        if not exists(os.path.join(output_dir_path, 'SR')):
+            os.mkdir(os.path.join(output_dir_path, 'SR'))
+
+        plt.imsave(os.path.join(output_dir_path, 'HR/{}.png'.format(filename.split('.')[0])),
+                                        cropped_hr, vmin=0, vmax=1., dpi=1)
+        plt.imsave(os.path.join(output_dir_path, 'SR/{}.png'.format(filename.split('.')[0])),
+                                        cropped_sr, vmin=0, vmax=1., dpi=1)
         # psnr, ssim = comp_upto_shift(hr * 255, sr*255, maxshift=1, border=conf.sf, min_interval=0.25)
         # im_psnr += psnr
         # im_ssim += ssim
 
 
-    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}, Average Kernel PSNR: {:.2f}'.format(conf.output_dir_path,
+    print('{}_iter{} ({} images), Average Imgae PSNR/SSIM: {:.2f}/{:.4f}, Average Kernel PSNR: {:.2f}'.format(output_dir_path,
                                                                                                   used_iter,
                                                                                                   len(filesource),
                                                                                                   im_psnr / len(

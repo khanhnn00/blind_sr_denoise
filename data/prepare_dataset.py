@@ -10,6 +10,7 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 import argparse
+import random
 
 
 # Function for centering a kernel
@@ -129,11 +130,12 @@ def my_degradation(input, kernel, scale_factor, noise_im, device=torch.device('c
 
     # add AWGN noise
     noises = np.random.normal(0, noise_im/255, output.shape)
-    print(noises.max(), noises.mean(), noises.min())
+    # print(noises.max(), noises.mean(), noises.min())
     noises = torch.from_numpy(noises).type(torch.FloatTensor).to(device)
     output = output + noises
-    print(output.shape)
+    # print(output.shape)
     tmp = output - noises
+    # output = torch.clamp(output, max=1, min=0)
     # print(tmp.shape)
     tmp = tmp.permute(0,2,3,1).squeeze(0).cpu().numpy()
 
@@ -142,6 +144,96 @@ def my_degradation(input, kernel, scale_factor, noise_im, device=torch.device('c
 
     return output, tmp, noises
 
+def generate_sigma( w, h, sigma_max=75, sigma_min=0):
+        center = [random.uniform(0, h), random.uniform(0, w)]
+        scale = random.uniform(h/4, w/4*3)
+        kernel = gaussian_kernel(h, w, center, scale)
+        up = random.uniform(sigma_min/255.0, sigma_max/255.0)
+        down = random.uniform(sigma_min/255.0, sigma_max/255.0)
+        if up < down:
+            up, down = down, up
+        up += 5/255.0
+        sigma_map = down + (kernel-kernel.min())/(kernel.max()-kernel.min())  *(up-down)
+        sigma_map = sigma_map.astype(np.float32)
+
+        return sigma_map[:, :, np.newaxis]
+
+def gaussian_kernel(H, W, center, scale):
+    centerH = center[0]
+    centerW = center[1]
+    XX, YY = np.meshgrid(np.arange(W), np.arange(H))
+    ZZ = 1 / (2*np.pi*scale**2) * np.exp( (-(XX-centerH)**2-(YY-centerW)**2)/(2*scale**2) )
+    return ZZ
+
+def new_degradation(input, kernel, scale_factor, noise_im, device=torch.device('cuda')):
+    # preprocess image and kernel
+    # print(input.max(), input.min())
+    input = input.type(torch.FloatTensor).to(device).permute(1, 0, 2, 3)
+    # print(input.shape)
+    # print(input.max(), input.min())
+    hr = input.permute(1, 0, 2, 3)
+    # print(x.max(), x.min())
+    input = F.pad(input, pad=(kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2),
+                  mode='circular')
+    kernel = kernel.type(torch.FloatTensor).to(device).unsqueeze(0).unsqueeze(0)
+
+    # blur
+    output = F.conv2d(input, kernel)
+
+    # down-sample
+    output = output[:, :, ::scale_factor, ::scale_factor].permute(1,0,2,3)
+
+    # add AWGN noise
+    sigma_map = generate_sigma(output.shape[3], output.shape[2])
+    noises = torch.randn(output.shape) * torch.from_numpy(sigma_map).permute(2,0,1).unsqueeze(0)
+
+    # noises = np.random.randn(*output.shape) * (noise_im/255.)
+    # noises = torch.from_numpy(noises)
+    
+    output = output + noises.type(torch.float32).to(device)
+    tmp = output - noises.type(torch.FloatTensor).to(device)
+    tmp = tmp.permute(0,2,3,1).squeeze(0).cpu().numpy()
+
+    #for testing with non-noise image
+    # output = output - noises.type(torch.FloatTensor).to(device)
+
+    sigma_map = generate_sigma(hr.shape[3], hr.shape[2])
+    noises_ = torch.randn(hr.shape) * torch.from_numpy(sigma_map).permute(2,0,1).unsqueeze(0)
+    hr_noise = hr  + noises_.type(torch.float32).to(device)
+
+    # print(output.max(), output.min())
+    
+
+    return output, tmp, noises, hr, hr_noise
+
+def create_dataset(input, kernel, scale_factor, noise_im, device=torch.device('cuda')):
+    # preprocess image and kernel
+    # print(input.max(), input.min())
+    input = input.type(torch.FloatTensor).to(device).permute(1, 0, 2, 3)
+    # print(input.shape)
+    # print(input.max(), input.min())
+    # print(x.max(), x.min())
+    input = F.pad(input, pad=(kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2, kernel.shape[0] // 2),
+                  mode='circular')
+    kernel = kernel.type(torch.FloatTensor).to(device).unsqueeze(0).unsqueeze(0)
+
+    # blur
+    output = F.conv2d(input, kernel)
+
+    # down-sample
+    # output = output[:, :, ::scale_factor, ::scale_factor].permute(1,0,2,3)
+    output = output.permute(1,0,2,3)
+    # add AWGN noise
+    # sigma_map = generate_sigma(output.shape[3], output.shape[2])
+    # noises = torch.randn(output.shape) * torch.from_numpy(sigma_map).permute(2,0,1).unsqueeze(0)
+    # output = output + noises.type(torch.float32).to(device)
+    # tmp = output - noises.type(torch.FloatTensor).to(device)
+    # tmp = tmp.permute(0,2,3,1).squeeze(0).cpu().numpy()
+
+    # print(output.max(), output.min())
+    
+
+    return output
 
 def modcrop(img_in, scale):
     # img_in: Numpy, HWC or HW

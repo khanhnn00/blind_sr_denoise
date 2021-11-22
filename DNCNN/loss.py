@@ -16,7 +16,7 @@ class TVLoss(nn.Module):
         w_tv = torch.pow((x[:, :, :, 1:] - x[:, :, :, :w_x - 1]), 2).sum()
         return self.tv_loss_weight * 2 * (h_tv / count_h + w_tv / count_w) / batch_size
 
-    @staticmethod
+    @staticmethod  
     def tensor_size(t):
         return t.size()[1] * t.size()[2] * t.size()[3]
 
