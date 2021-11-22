@@ -14,7 +14,8 @@ First you need to place the pre-trained weight of KP and NP to anywhere you want
 
 Next, run the following command:
     ```
-    python ./DIPFKP/main.py
+    cd DIPFKP
+    python main.py --SR --sf 4 --dataset Test
     ```
 
 **BEFORE RUN**: please make sure that you edit the **overwritting paths, DECLARE PATH AT THIS SECTION** in the above file.
@@ -23,79 +24,15 @@ By default, the results should appear in the following path: ./data/log_DIPFKP/{
 
 ## Acknowledgements
 We thank Jingyun Liang for releasing his [code](https://github.com/JingyunLiang/FKP) that helped in the early stages of this project.
+
 We also thank Zongsheng Yue for the work at [this](https://github.com/zsyOAOA/VDNet) which contributes to the NP module of our project.
 
 
 
 ## Requirements
-- Python 3.6, PyTorch >= 1.6 
+- Python 3.6/3.7.9, PyTorch >= 1.5.1 
 - Requirements: opencv-python, tqdm
-- Platforms: Ubuntu 16.04, cuda-10.0 & cuDNN v-7.5
-
-
-## Quick Run
-To run the code without preparing data, run this command:
-```bash
-cd DIPFKP
-python main.py --SR --sf 4 --dataset Test
-```
-
----
-
-## Data Preparation
-To prepare testing data, please organize images as `data/datasets/DIV2K/HR/0801.png`, and run this command:
-```bash
-cd data
-python prepare_dataset.py --model DIPFKP --sf 2 --dataset Set5
-python prepare_dataset.py --model KernelGANFKP --sf 2 --dataset DIV2K
-```
-Commonly used datasets can be downloaded [here](https://github.com/xinntao/BasicSR/blob/master/docs/DatasetPreparation.md#common-image-sr-datasets). Note that KernelGAN/KernelGAN-FKP use analytic X4 kernel based on X2, and do not support X3.
-
-## FKP
-
-To train FKP, run this command:
-
-```bash
-cd FKP
-python main.py --train --sf 2
-```
-Pretrained FKP and [USRNet](https://github.com/cszn/KAIR) models are already provided in `data/pretrained_models`.
-
-
-## DIP-FKP
-
-To test DIP-FKP (no training phase), run this command:
-
-```bash
-cd DIPFKP
-python main.py --SR --sf 2 --dataset Set5
-```
-
-
-## KernelGAN-FKP
-
-To test KernelGAN-FKP (no training phase), run this command:
-
-```bash
-cd KernelGANFKP
-python main.py --SR --sf 2 --dataset DIV2K
-```
-
-## Results
-Please refer to the [paper](https://arxiv.org/pdf/2103.15977.pdf) and [supplementary](https://github.com/JingyunLiang/FKP/releases) for results. Since both DIP-FKP and KernelGAn-FKP are randomly intialized, different runs may get slightly different results. The reported results are averages of 5 runs.
-
-
-
-## Citation
-```
-@article{liang21fkp,
-  title={Flow-based Kernel Prior with Application to Blind Super-Resolution},
-  author={Liang, Jingyun and Zhang, Kai and Gu, Shuhang and Van Gool, Luc and Timofte, Radu},
-  journal={arXiv preprint arXiv:2103.15977},
-  year={2021}
-}
-```
-
+- Platforms: Ubuntu 20.04, cuda-10.2 & cuDNN v-7.5
 
 ## License & Acknowledgement
 
