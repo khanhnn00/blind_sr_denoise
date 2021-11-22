@@ -1,12 +1,8 @@
 # A Demonstration of Single Image Super-Resolution
 ### Setup
 0. **Minimum requirements.** This project was originally developed with Python 3.6, PyTorch 1.7 and CUDA 11.1. The training requires at least a Titan X GPUs (12Gb memory each).
-1. **Setup your Python environment.** Please, clone the repository and install the dependencies. We recommend using Anaconda 3 distribution:
-    ```
-    conda create -n <environment_name> --file requirements.txt
-    ```
 
-3. **Download pre-trained models.** For running the code, you need to download the two pre-trained weights of Kernel Prior (KP) and Noise Prior (NP) module. Here we use FKP as KP and VDNet as NP. The pretrained weight can be found [here](https://drive.google.com/drive/folders/1PVGobcRyYqHwnT2MhUUSLb6xZK5h0-B1?usp=sharing)
+1. **Download pre-trained models.** For running the code, you need to download the two pre-trained weights of Kernel Prior (KP) and Noise Prior (NP) module. Here we use FKP as KP and VDNet as NP. The pretrained weight can be found [here](https://drive.google.com/drive/folders/1PVGobcRyYqHwnT2MhUUSLb6xZK5h0-B1?usp=sharing)
 
 ### How to Run
 
@@ -15,6 +11,7 @@ First you need to place the pre-trained weight of KP and NP to anywhere you want
 Next, run the following command:
     ```
     cd DIPFKP
+    
     python main.py --SR --sf 4 --dataset Test
     ```
 
