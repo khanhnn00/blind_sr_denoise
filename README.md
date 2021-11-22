@@ -1,4 +1,4 @@
-# A Demonstration of Single Image Super-Resolution
+# BLIND IMAGE SUPER-RESOLUTION
 ### Setup
 0. **Minimum requirements.** This project was originally developed with Python 3.6, PyTorch 1.7 and CUDA 11.1. The training requires at least a Titan X GPUs (12Gb memory each).
 
